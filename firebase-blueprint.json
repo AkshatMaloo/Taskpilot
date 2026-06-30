@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "The user profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique Firebase Auth user ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User profile name" },
+        "photoURL": { "type": "string", "description": "User avatar photo URL" },
+        "createdAt": { "type": "string", "description": "Timestamp when the user account was initialized" }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "task": {
+      "title": "Task",
+      "description": "A productivity task representing actionable work",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["todo", "in_progress", "done"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "dueDate": { "type": "string" },
+        "urgency": { "type": "integer", "description": "Scale of 1-10" },
+        "importance": { "type": "integer", "description": "Scale of 1-10" },
+        "effortEstimate": { "type": "number", "description": "Estimated hours remaining" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "status", "priority", "urgency", "importance", "effortEstimate", "createdAt"]
+    },
+    "subtask": {
+      "title": "Subtask",
+      "description": "A subcomponent checklist item belonging to a parent task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "taskId": { "type": "string" },
+        "title": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "taskId", "title", "completed", "createdAt"]
+    },
+    "goal": {
+      "title": "Goal",
+      "description": "A long-term milestone or objective",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "targetDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "completed", "abandoned"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "status", "createdAt"]
+    },
+    "habit": {
+      "title": "Habit",
+      "description": "A recurring routine to track build-up of streaks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "frequency": { "type": "string", "enum": ["daily", "weekly"] },
+        "streakCount": { "type": "integer" },
+        "lastCompletedDate": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "frequency", "streakCount", "createdAt"]
+    },
+    "progress_log": {
+      "title": "Progress Log",
+      "description": "Audit trails and history of activities across tasks, habits, and goals",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "entityId": { "type": "string", "description": "ID of task, goal, or habit" },
+        "type": { "type": "string", "enum": ["task_completed", "goal_achieved", "habit_streak", "daily_recap"] },
+        "timestamp": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "userId", "entityId", "type", "timestamp"]
+    },
+    "nudge": {
+      "title": "Nudge",
+      "description": "Proactive and friendly suggestions pushed from the AI Companion Agent",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "sent", "dismissed"] },
+        "scheduledFor": { "type": "string" },
+        "sentAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "message", "status", "scheduledFor"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "Collection of user profiles containing display data and initial timestamps"
+    },
+    "/tasks/{taskId}": {
+      "schema": "task",
+      "description": "Collection of user-created tasks"
+    },
+    "/tasks/{taskId}/subtasks/{subtaskId}": {
+      "schema": "subtask",
+      "description": "Sub-collection of checklist items per task"
+    },
+    "/goals/{goalId}": {
+      "schema": "goal",
+      "description": "Collection of long-term milestones"
+    },
+    "/habits/{habitId}": {
+      "schema": "habit",
+      "description": "Collection of tracked habits and routine streaks"
+    },
+    "/progress_logs/{logId}": {
+      "schema": "progress_log",
+      "description": "Collection of task completions, streak updates, and companion logs"
+    },
+    "/nudges/{nudgeId}": {
+      "schema": "nudge",
+      "description": "Collection of scheduling nudges and companion suggestions"
+    }
+  }
+}

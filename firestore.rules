@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper to verify ID format to guard against path variable injection attacks
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Helper to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper to check if requester matches target userId
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Validation for User Profile document
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt'])
+        && data.keys().size() <= 10
+        && data.uid == request.auth.uid
+        && data.email is string
+        && data.createdAt is string;
+    }
+
+    // Validation for Task document
+    function isValidTask(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'status', 'priority', 'urgency', 'importance', 'effortEstimate', 'createdAt'])
+        && data.keys().size() <= 15
+        && data.userId == request.auth.uid
+        && data.id is string
+        && data.title is string && data.title.size() <= 200
+        && data.status in ['todo', 'in_progress', 'done']
+        && data.priority in ['low', 'medium', 'high']
+        && data.urgency is int && data.urgency >= 1 && data.urgency <= 10
+        && data.importance is int && data.importance >= 1 && data.importance <= 10
+        && (data.effortEstimate is int || data.effortEstimate is float) && data.effortEstimate >= 0.0
+        && data.createdAt is string;
+    }
+
+    // Validation for Subtask document
+    function isValidSubtask(data) {
+      return data.keys().hasAll(['id', 'taskId', 'title', 'completed', 'createdAt'])
+        && data.keys().size() <= 10
+        && data.id is string
+        && data.taskId is string
+        && data.title is string && data.title.size() <= 200
+        && data.completed is bool
+        && data.createdAt is string;
+    }
+
+    // Validation for Goal document
+    function isValidGoal(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'status', 'createdAt'])
+        && data.keys().size() <= 10
+        && data.userId == request.auth.uid
+        && data.id is string
+        && data.title is string && data.title.size() <= 200
+        && data.status in ['active', 'completed', 'abandoned']
+        && data.createdAt is string;
+    }
+
+    // Validation for Habit document
+    function isValidHabit(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'frequency', 'streakCount', 'createdAt'])
+        && data.keys().size() <= 10
+        && data.userId == request.auth.uid
+        && data.id is string
+        && data.title is string && data.title.size() <= 200
+        && data.frequency in ['daily', 'weekly']
+        && data.streakCount is int && data.streakCount >= 0
+        && data.createdAt is string;
+    }
+
+    // Validation for Progress Log document
+    function isValidProgressLog(data) {
+      return data.keys().hasAll(['id', 'userId', 'entityId', 'type', 'timestamp'])
+        && data.keys().size() <= 10
+        && data.userId == request.auth.uid
+        && data.id is string
+        && data.entityId is string
+        && data.type in ['task_completed', 'goal_achieved', 'habit_streak', 'daily_recap']
+        && data.timestamp is string;
+    }
+
+    // Validation for Nudge document
+    function isValidNudge(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'message', 'status', 'scheduledFor'])
+        && data.keys().size() <= 10
+        && data.userId == request.auth.uid
+        && data.id is string
+        && data.title is string
+        && data.message is string
+        && data.status in ['pending', 'sent', 'dismissed']
+        && data.scheduledFor is string;
+    }
+
+    // Rule matches
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidUser(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAuthenticated() && isValidId(taskId) && request.resource.data.userId == request.auth.uid && isValidTask(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+      match /subtasks/{subtaskId} {
+        allow read: if isAuthenticated() && get(/databases/$(database)/documents/tasks/$(taskId)).data.userId == request.auth.uid;
+        allow create, update: if isAuthenticated() && isValidId(subtaskId) && get(/databases/$(database)/documents/tasks/$(taskId)).data.userId == request.auth.uid && isValidSubtask(request.resource.data);
+        allow delete: if isAuthenticated() && get(/databases/$(database)/documents/tasks/$(taskId)).data.userId == request.auth.uid;
+      }
+    }
+
+    match /goals/{goalId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAuthenticated() && isValidId(goalId) && request.resource.data.userId == request.auth.uid && isValidGoal(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /habits/{habitId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAuthenticated() && isValidId(habitId) && request.resource.data.userId == request.auth.uid && isValidHabit(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /progress_logs/{logId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAuthenticated() && isValidId(logId) && request.resource.data.userId == request.auth.uid && isValidProgressLog(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /nudges/{nudgeId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAuthenticated() && isValidId(nudgeId) && request.resource.data.userId == request.auth.uid && isValidNudge(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
